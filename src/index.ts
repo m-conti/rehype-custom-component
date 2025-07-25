@@ -1,5 +1,5 @@
 import { visit } from 'unist-util-visit';
-import type { Element, Text, Root } from 'hast';
+import type { Element, Text, Root, Parent } from 'hast';
 
 interface CustomComponentOptions {
   tagName?: string; // Name of the custom element to create
@@ -57,9 +57,7 @@ export default function rehypeCustomComponent({
     return nodes.length > 0 ? nodes : [{ type: 'text', value: text }];
   };
 
-  // Return the transformer function
-  return (tree: Root) => {
-    visit(tree, 'text', (node: Text, index: number | undefined, parent) => {
+  const onVisit = (node: Text, index: number | undefined, parent: Parent | undefined) => {
       if (!parent || index === undefined || !('children' in parent)) return;
 
       const processed = processTextNode(node.value);
@@ -68,7 +66,12 @@ export default function rehypeCustomComponent({
       if (processed.length > 1 || processed[0]?.type === 'element') {
         parent.children.splice(index, 1, ...processed);
       }
-    });
+    };
+
+  // Return the transformer function
+  return (tree: Root) => {
+    visit(tree, 'text', onVisit);
+    visit(tree, 'raw', onVisit);
   };
 }
 
