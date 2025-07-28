@@ -4,7 +4,7 @@
 ![license](https://img.shields.io/github/license/m-conti/rehype-custom-component)
 ![bundle size](https://img.shields.io/bundlephobia/min/rehype-custom-component)
 
-A [rehype](https://github.com/rehypejs/rehype) plugin to transform custom component shortcodes into HTML elements for React integration.
+A modern [rehype](https://github.com/rehypejs/rehype) plugin to transform custom component shortcodes with XML attributes into HTML elements for React integration.
 
 ## Installation
 
@@ -18,7 +18,7 @@ pnpm add rehype-custom-component
 
 ## Usage
 
-This plugin transforms `<CustomComponent>` shortcodes with props into custom HTML elements that can be handled by React or other frameworks.
+This plugin transforms `<CustomComponent>` shortcodes with standard XML/HTML attributes into custom HTML elements that can be handled by React or other frameworks.
 
 ### Basic Usage
 
@@ -33,10 +33,10 @@ const processor = unified()
   .use(rehypeCustomComponent)
   .use(rehypeStringify);
 
-const input = `<p>Check out this component: <CustomComponent name="button" {"type": "primary", "size": "large"} /></p>`;
+const input = `<p>Check out this component: <CustomComponent name="button" type="primary" /></p>`;
 const result = await processor.process(input);
 console.log(String(result));
-// Output: <p>Check out this component: <custom-component name="button" props="{&quot;type&quot;: &quot;primary&quot;, &quot;size&quot;: &quot;large&quot;}"></custom-component></p>
+// Output: <p>Check out this component: <custom-component name="button" type="primary"></custom-component></p>
 ```
 
 ### With Markdown
@@ -56,54 +56,72 @@ const processor = unified()
 
 const markdown = `# My Page
 
-Here's a custom component: <CustomComponent name="card" {"title": "Hello", "theme": "dark"} />`;
+Here's a custom component: <CustomComponent name="card" title="Hello" theme="dark" />`;
 
 const result = await processor.process(markdown);
 ```
 
 ## Shortcode Format
 
-The plugin recognizes shortcodes in the format:
+The plugin recognizes shortcodes with standard XML/HTML attribute syntax:
 
+```xml
+<CustomComponent name="componentName" attr1="value1" attr2="value2" />
 ```
-<CustomComponent name="componentName" {"prop1": "value1", "prop2": "value2"} />
+
+### Supported Attribute Formats
+
+```xml
+<!-- Quoted values -->
+<CustomComponent name="button" type="primary" />
+
+<!-- Unquoted values -->
+<CustomComponent name="icon" size=large />
+
+<!-- Boolean attributes (flags) -->
+<CustomComponent name="input" required disabled />
+
+<!-- Mixed attributes -->
+<CustomComponent name="card" title="Hello" active priority=high />
 ```
 
 ### Multi-line Support
 
-The plugin supports multi-line shortcodes:
+The plugin supports multi-line shortcodes with flexible formatting:
 
-```
+```xml
+<!-- Standard multi-line -->
 <CustomComponent 
   name="complexComponent" 
-  {
-    "title": "My Title",
-    "settings": {
-      "theme": "dark",
-      "size": "large"
-    }
-  } 
+  title="My Title"
+  theme="dark"
+  size="large"
 />
+
+<!-- Minimal multi-line -->
+<CustomComponent
+  data="value"
+  />
 ```
 
 ### Examples
 
-```typescript
-// Simple component
-<CustomComponent name="button" {"type": "primary"} />
-// → <custom-component name="button" props="{&quot;type&quot;: &quot;primary&quot;}"></custom-component>
+```xml
+<!-- Simple component -->
+<CustomComponent name="button" type="primary" />
+→ <custom-component name="button" type="primary"></custom-component>
 
-// Complex component with nested props
-<CustomComponent name="card" {"title": "Hello", "meta": {"author": "John", "date": "2025-01-01"}} />
-// → <custom-component name="card" props="{&quot;title&quot;: &quot;Hello&quot;, &quot;meta&quot;: {&quot;author&quot;: &quot;John&quot;, &quot;date&quot;: &quot;2025-01-01&quot;}}"></custom-component>
+<!-- Complex component with multiple attributes -->
+<CustomComponent name="card" title="Hello" author="John" published />
+→ <custom-component name="card" title="Hello" author="John" published></custom-component>
 
-// Component without props
+<!-- Component without additional attributes -->
 <CustomComponent name="simple" />
-// → <custom-component name="simple" props="{}"></custom-component>
+→ <custom-component name="simple"></custom-component>
 
-// Component with empty props
-<CustomComponent name="button" {} />
-// → <custom-component name="button" props="{}"></custom-component>
+<!-- Component with boolean flags -->
+<CustomComponent name="input" required disabled />
+→ <custom-component name="input" required disabled></custom-component>
 ```
 
 ## Options
@@ -118,8 +136,22 @@ The HTML tag name to use for the generated elements.
 ```typescript
 .use(rehypeCustomComponent, { tagName: 'my-component' })
 
-// <CustomComponent name="button" {"type": "primary"} />
-// → <my-component name="button" props="{&quot;type&quot;: &quot;primary&quot;}"></my-component>
+// <CustomComponent name="button" type="primary" />
+// → <my-component name="button" type="primary"></my-component>
+```
+
+### `matchName`
+
+- Type: `string`
+- Default: `'CustomComponent'`
+
+The component name to match in the source text.
+
+```typescript
+.use(rehypeCustomComponent, { matchName: 'MyComponent' })
+
+// <MyComponent name="button" type="primary" />
+// → <custom-component name="button" type="primary"></custom-component>
 ```
 
 ## TypeScript
@@ -140,16 +172,16 @@ The generated HTML elements can be easily handled in React:
 
 ```jsx
 // Create a custom component handler
-const CustomComponentRenderer = ({ name, props, ...rest }) => {
-  const parsedProps = typeof props === 'string' ? JSON.parse(props) : props;
-  
+const CustomComponentRenderer = ({ name, ...props }) => {
   switch (name) {
     case 'button':
-      return <Button {...parsedProps} />;
+      return <Button {...props} />;
     case 'card':
-      return <Card {...parsedProps} />;
+      return <Card {...props} />;
+    case 'icon':
+      return <Icon {...props} />;
     default:
-      return <div data-unknown-component={name} {...parsedProps} />;
+      return <div data-unknown-component={name} {...props} />;
   }
 };
 
@@ -158,12 +190,77 @@ const components = {
   'custom-component': CustomComponentRenderer,
   // other components...
 };
+
+// Usage example with the generated attributes
+// <CustomComponent name="button" type="primary" size="large" disabled />
+// becomes:
+// <Button type="primary" size="large" disabled />
+```
+
+## Advanced Usage
+
+### Custom Component Names
+
+You can configure the plugin to match different component names:
+
+```typescript
+// Match React-style components
+.use(rehypeCustomComponent, { 
+  matchName: 'ReactComponent',
+  tagName: 'react-component' 
+})
+
+// Match Vue-style components
+.use(rehypeCustomComponent, { 
+  matchName: 'VueComponent',
+  tagName: 'vue-component' 
+})
+```
+
+### Processing Pipeline
+
+```typescript
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
+import rehypeCustomComponent from 'rehype-custom-component';
+import rehypeStringify from 'rehype-stringify';
+
+const processor = unified()
+  .use(remarkParse)
+  .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeCustomComponent, {
+    tagName: 'my-component',
+    matchName: 'Component'
+  })
+  .use(rehypeStringify, { allowDangerousHtml: true });
+
+const markdown = `
+# My Document
+
+<Component name="hero" title="Welcome" subtitle="Get started" primary />
+
+Regular markdown content continues here.
+`;
+
+const result = await processor.process(markdown);
 ```
 
 ## Requirements
 
 - Node.js 16 or higher
-- `unist-util-visit` (peer dependency)
+- Modern ES6+ environment supporting `matchAll()`, nullish coalescing (`??`), and spread syntax
+
+## Features
+
+- ✅ **Modern ES6+ implementation** with array destructuring and functional programming patterns
+- ✅ **XML/HTML attribute syntax** - familiar and standard
+- ✅ **Multi-line component support** with flexible formatting
+- ✅ **Boolean attributes** for flags and toggles
+- ✅ **Quoted and unquoted values** support
+- ✅ **Configurable component names** and output tag names
+- ✅ **TypeScript support** with full type definitions
+- ✅ **Zero dependencies** except for peer dependencies
 
 ## License
 
