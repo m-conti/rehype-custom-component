@@ -23,7 +23,7 @@ describe('rehype-custom-component', () => {
           children: [
             { 
               type: 'text', 
-              value: 'Check this out <CustomComponent name="button" {"type": "primary"} />' 
+              value: 'Check this out <CustomComponent name="button" type="primary" />' 
             }
           ]
         }
@@ -42,7 +42,7 @@ describe('rehype-custom-component', () => {
       tagName: 'custom-component',
       properties: {
         name: 'button',
-        props: { type: 'primary' }
+        type: 'primary'
       },
       children: []
     });
@@ -60,7 +60,7 @@ describe('rehype-custom-component', () => {
           children: [
             { 
               type: 'text', 
-              value: 'Like this <CustomComponent name="card" {"title": "Hello", "meta": {"author": "John"}} />' 
+              value: 'Like this <CustomComponent name="card" title="Hello" author="John" />' 
             }
           ]
         }
@@ -75,7 +75,8 @@ describe('rehype-custom-component', () => {
       tagName: 'custom-component',
       properties: {
         name: 'card',
-        props: { title: 'Hello', meta: { author: 'John' } }
+        title: 'Hello',
+        author: 'John'
       },
       children: []
     });
@@ -93,7 +94,7 @@ describe('rehype-custom-component', () => {
           children: [
             { 
               type: 'text', 
-              value: 'I love <CustomComponent name="button" {"type": "primary"} /> and <CustomComponent name="icon" {"name": "heart"} /> coding!' 
+              value: 'I love <CustomComponent name="button" type="primary" /> and <CustomComponent name="icon" icon="heart" /> coding!' 
             }
           ]
         }
@@ -112,7 +113,7 @@ describe('rehype-custom-component', () => {
       tagName: 'custom-component',
       properties: {
         name: 'button',
-        props: { type: 'primary' }
+        type: 'primary'
       },
       children: []
     });
@@ -125,7 +126,7 @@ describe('rehype-custom-component', () => {
       tagName: 'custom-component',
       properties: {
         name: 'icon',
-        props: { name: 'heart' }
+        icon: 'heart'
       },
       children: []
     });
@@ -147,7 +148,7 @@ describe('rehype-custom-component', () => {
           children: [
             { 
               type: 'text', 
-              value: 'Custom <CustomComponent name="button" {"type": "primary"} />' 
+              value: 'Custom <CustomComponent name="button" type="primary" />' 
             }
           ]
         }
@@ -161,7 +162,7 @@ describe('rehype-custom-component', () => {
       tagName: 'my-component',
       properties: {
         name: 'button',
-        props: { type: 'primary' }
+        type: 'primary'
       },
       children: []
     });
@@ -181,7 +182,8 @@ describe('rehype-custom-component', () => {
               type: 'text', 
               value: `Multi-line <CustomComponent 
   name="complex" 
-  {"config": {"theme": "dark", "size": "large"}} 
+  theme="dark" 
+  size="large"
 />` 
             }
           ]
@@ -196,7 +198,41 @@ describe('rehype-custom-component', () => {
       tagName: 'custom-component',
       properties: {
         name: 'complex',
-        props: { config: { theme: 'dark', size: 'large' } }
+        theme: 'dark',
+        size: 'large'
+      },
+      children: []
+    });
+  });
+
+  it('handles multi-line custom components with minimal format', async () => {
+    const processor = createProcessor();
+    const tree: Root = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tagName: 'p',
+          properties: {},
+          children: [
+            { 
+              type: 'text', 
+              value: `Minimal format <CustomComponent
+  data="value"
+  />` 
+            }
+          ]
+        }
+      ]
+    };
+    const result = await processor.run(tree) as Root;
+    const pElement = result.children[0] as Element;
+    
+    expect(pElement.children[1]).toEqual({
+      type: 'element',
+      tagName: 'custom-component',
+      properties: {
+        data: 'value'
       },
       children: []
     });
@@ -228,8 +264,7 @@ describe('rehype-custom-component', () => {
       type: 'element',
       tagName: 'custom-component',
       properties: {
-        name: 'simple',
-        props: {}
+        name: 'simple'
       },
       children: []
     });
@@ -275,7 +310,7 @@ describe('rehype-custom-component', () => {
           children: [
             { 
               type: 'text', 
-              value: 'Malformed <CustomComponent name="test" invalid /> text' 
+              value: 'Malformed <CustomComponent name="test" missing-close-tag' 
             }
           ]
         }
@@ -284,11 +319,11 @@ describe('rehype-custom-component', () => {
     const result = await processor.run(tree) as Root;
     const pElement = result.children[0] as Element;
     
-    // Should remain unchanged since it doesn't match the regex
+    // Should remain unchanged since it doesn't match the regex (missing />)
     expect(pElement.children).toHaveLength(1);
     expect(pElement.children[0]).toEqual({
       type: 'text',
-      value: 'Malformed <CustomComponent name="test" invalid /> text'
+      value: 'Malformed <CustomComponent name="test" missing-close-tag'
     });
   });
 
@@ -304,7 +339,7 @@ describe('rehype-custom-component', () => {
           children: [
             { 
               type: 'text', 
-              value: 'Empty props <CustomComponent name="simple" {} />' 
+              value: 'Boolean flags <CustomComponent name="simple" active disabled />' 
             }
           ]
         }
@@ -318,7 +353,8 @@ describe('rehype-custom-component', () => {
       tagName: 'custom-component',
       properties: {
         name: 'simple',
-        props: {}
+        active: true,
+        disabled: true
       },
       children: []
     });
@@ -342,7 +378,7 @@ describe('rehype-custom-component', () => {
             },
             { 
               type: 'text', 
-              value: ' <CustomComponent name="test" {"id": 1} /> ' 
+              value: ' <CustomComponent name="test" id="1" /> ' 
             },
             {
               type: 'element',
@@ -373,7 +409,7 @@ describe('rehype-custom-component', () => {
       tagName: 'custom-component',
       properties: {
         name: 'test',
-        props: { id: 1 }
+        id: '1'
       },
       children: []
     });

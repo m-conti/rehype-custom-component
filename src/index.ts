@@ -11,8 +11,8 @@ export default function rehypeCustomComponent({
   matchName = 'CustomComponent',
 }: CustomComponentOptions = {}) {
 
-  // Regex to match custom component shortcodes: <CustomComponent name="iconname" {props:{}, styles:{}} />
-  const REGEX = /<MATCH\s+name="([^"]+)"\s+(?:(\{[^>]*\})\s+)?\/>/;
+  // Regex to match custom component shortcodes with XML attributes: <CustomComponent name="iconname" attr="value" flag />
+  const REGEX = /<MATCH\s+([^>]*?)\/>/;
   const CC_REGEX = new RegExp(REGEX.source.replace('MATCH', matchName), 'gs');
 
   const processTextNode = (text: string): (Text | Element)[] => {
@@ -21,7 +21,7 @@ export default function rehypeCustomComponent({
 
     // Use matchAll for modern iteration over all matches
     for (const match of text.matchAll(CC_REGEX)) {
-      const [fullMatch, componentName, props] = match;
+      const [fullMatch, attributesString] = match;
       const startIndex = match.index ?? 0;
 
       // If there's text before the match, add it as a text node
@@ -32,14 +32,17 @@ export default function rehypeCustomComponent({
         });
       }
 
-      // Create the custom component element
+      // Parse XML attributes using modern ES6+ approach
+      const properties = [...attributesString.matchAll(/(\w+)(?:=(?:"([^"]*)"|([^\s>]+)))?/g)]
+        .reduce((acc, [, attrName, quotedValue, unquotedValue]) => ({
+          ...acc,
+          [attrName]: quotedValue ?? unquotedValue ?? true
+        }), {} as Record<string, any>);
+      
       nodes.push({
         type: 'element',
-        tagName: tagName,
-        properties: {
-          name: componentName,
-          props: JSON.parse(props || '{}'),
-        },
+        tagName,
+        properties,
         children: []
       });
 
